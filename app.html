@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CspWhy - CSP interrogator</title>
+<style>
+  :root { --bg:#0e1116; --card:#171c24; --ink:#e8ecf1; --dim:#9aa6b2; --acc:#f472b6; --acc2:#38bdf8; --warn:#fbbf24; --bad:#f87171; --ok:#4ade80; --line:#262e3a; }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--ink); font:15px/1.55 -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+  .wrap { max-width:980px; margin:0 auto; padding:24px 18px 80px; }
+  header { display:flex; align-items:baseline; gap:12px; flex-wrap:wrap; margin-bottom:14px; }
+  header h1 { font-size:24px; margin:0; letter-spacing:-0.3px; }
+  header .tag { color:var(--dim); font-size:14px; }
+  header a { color:var(--acc2); text-decoration:none; font-size:13px; margin-left:auto; }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:16px 18px; margin-bottom:14px; }
+  label { display:block; font-size:12px; color:var(--dim); margin:0 0 4px; text-transform:uppercase; letter-spacing:0.6px; }
+  textarea, input[type=text] { width:100%; background:#0a0d11; border:1px solid var(--line); color:var(--ink); border-radius:8px; padding:9px 10px; font:13.5px/1.5 ui-monospace, Menlo, Consolas, monospace; }
+  textarea:focus, input:focus { outline:2px solid var(--acc2); }
+  .presets { display:flex; gap:6px; flex-wrap:wrap; margin-top:10px; }
+  .presets button, .checks button { background:#0a0d11; border:1px solid var(--line); color:var(--acc2); border-radius:999px; padding:6px 12px; font-size:12.5px; cursor:pointer; }
+  .presets button:hover, .checks button:hover { border-color:var(--acc2); }
+  .checks { display:flex; gap:6px; flex-wrap:wrap; margin-top:8px; }
+  .verdict { border-radius:10px; padding:12px 15px; font-size:14.5px; margin-top:10px; border:1px solid; }
+  .verdict.allow { background:#07220f; border-color:var(--ok); color:var(--ok); }
+  .verdict.block { background:#2a0d0d; border-color:var(--bad); color:var(--bad); }
+  .verdict.cond { background:#2a2108; border-color:var(--warn); color:var(--warn); }
+  .verdict small { display:block; font-weight:400; font-size:12.5px; color:var(--dim); margin-top:3px; }
+  table { width:100%; border-collapse:collapse; font-size:13px; margin-top:6px; }
+  th, td { text-align:left; padding:7px 9px; border-bottom:1px solid var(--line); vertical-align:top; }
+  th { color:var(--dim); font-weight:600; font-size:11.5px; text-transform:uppercase; letter-spacing:0.5px; }
+  .mono { font-family:ui-monospace, Menlo, Consolas, monospace; font-size:12.5px; }
+  .note { color:var(--warn); font-size:13px; margin:6px 0 0; }
+  h3 { margin:0 0 10px; font-size:16px; }
+  .grid { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+  @media (max-width:760px){ .grid{ grid-template-columns:1fr; } }
+  details { margin-top:12px; }
+  summary { cursor:pointer; color:var(--acc2); font-size:14px; }
+  .lose { color:var(--dim); }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>CspWhy</h1>
+    <span class="tag">what your Content-Security-Policy actually allows</span>
+    <a href="index.html">&larr; about</a>
+  </header>
+
+  <div class="card">
+    <label for="origin">Your site's origin</label>
+    <input id="origin" type="text" value="https://app.example.com" spellcheck="false">
+    <label for="policy" style="margin-top:10px">Content-Security-Policy</label>
+    <textarea id="policy" rows="4" spellcheck="false">default-src 'self'; script-src 'self' https://cdn.example.com; img-src 'self' data:; style-src 'self' 'unsafe-inline'</textarea>
+    <div class="presets">
+      <button type="button" data-p="default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' data:">Strict starter</button>
+      <button type="button" data-p="default-src 'self' 'unsafe-inline' https:">Typical copy-paste</button>
+      <button type="button" data-p="script-src * 'unsafe-eval' 'unsafe-inline'; img-src *">Wildcard mess</button>
+      <button type="button" data-p="default-src 'none'; script-src 'none' 'self'; style-src 'self'">The 'none' trap</button>
+      <button type="button" data-p="script-src-elem https://cdn.example.com; script-src 'self'">Elem vs attr chains</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>Ask the policy</h3>
+    <div class="grid">
+      <div>
+        <label>Inline checks</label>
+        <div class="checks">
+          <button type="button" data-c='{"type":"script","inline":true}'>inline &lt;script&gt;</button>
+          <button type="button" data-c='{"type":"script-attr","inline":true}'>onclick= attribute</button>
+          <button type="button" data-c='{"type":"style","inline":true}'>inline &lt;style&gt;</button>
+          <button type="button" data-c='{"type":"style-attr","inline":true}'>style= attribute</button>
+        </div>
+      </div>
+      <div>
+        <label for="url">URL checks</label>
+        <input id="url" type="text" value="https://cdn.example.com/lib.js" spellcheck="false">
+        <div class="checks">
+          <button type="button" data-u="script">script</button>
+          <button type="button" data-u="img">image</button>
+          <button type="button" data-u="connect">fetch/XHR</button>
+          <button type="button" data-u="font">font</button>
+          <button type="button" data-u="frame">iframe</button>
+          <button type="button" data-u="worker">worker</button>
+          <button type="button" data-u="form-action">form submit</button>
+        </div>
+      </div>
+    </div>
+    <div id="verdicts"></div>
+  </div>
+
+  <div class="card">
+    <h3>Policy anatomy</h3>
+    <table id="anatomy"></table>
+    <div id="warnings"></div>
+    <details>
+      <summary>How a browser reads this</summary>
+      <p class="lose" style="font-size:13.5px; margin-top:8px">CSP3 walks a fallback chain per resource kind: script checks ask script-src-elem (elements) or script-src-attr (attributes), then script-src, then default-src. Workers walk worker-src &rarr; child-src &rarr; script-src &rarr; default-src. form-action, base-uri and frame-ancestors never fall back - absent means unrestricted. Inside a source list: 'none' wins over everything (even combined with 'self'), *.example.com matches subdomains but not the bare domain, http: also matches https (never the reverse), and 'self' is the exact scheme + host + port of your origin. Duplicate directives are ignored after the first.</p>
+    </details>
+  </div>
+</div>
+<script src="engine.js"></script>
+<script>
+(function(){
+'use strict';
+var $=function(id){return document.getElementById(id);};
+function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+function origin(){
+  var u=CspWhy.parseUrl($('origin').value.trim());
+  return (u&&u.hierarchical)?u:{scheme:'https',host:'app.example.com',port:null};
+}
+function describe(check){
+  if(check.inline){
+    return {script:'inline <script> element','script-attr':'inline event handler attribute (onclick=...)',style:'inline <style> element','style-attr':'inline style= attribute'}[check.type];
+  }
+  return {script:'script',img:'image',connect:'fetch/XHR',font:'font',frame:'iframe',worker:'worker','form-action':'form submission'}[check.type]+' from '+check.url;
+}
+function ask(check){
+  var p=CspWhy.parsePolicy($('policy').value);
+  var r=CspWhy.evaluate(p,origin(),check);
+  var cls=r.allowed===true?'allow':(r.allowed==='conditional'?'cond':'block');
+  var word=r.allowed===true?'ALLOWED':(r.allowed==='conditional'?'CONDITIONAL':'BLOCKED');
+  var div=document.createElement('div');
+  div.className='verdict '+cls;
+  div.innerHTML=word+': '+esc(describe(check))+'<small>'+esc(r.reason)+(r.directive?'':'')+'</small>';
+  $('verdicts').prepend(div);
+  anatomy();
+}
+function anatomy(){
+  var p=CspWhy.parsePolicy($('policy').value);
+  var rows='<tr><th>Directive</th><th>Sources</th><th>Reading</th></tr>';
+  var knownFetch=Object.keys(CspWhy.CHAINS).map(function(k){return k;});
+  var fetchDirs=['script-src-elem','script-src-attr','script-src','style-src-elem','style-src-attr','style-src','default-src','img-src','connect-src','font-src','media-src','object-src','manifest-src','prefetch-src','frame-src','child-src','worker-src'];
+  var otherDirs=['form-action','base-uri','frame-ancestors'];
+  p.order.forEach(function(name){
+    var d=p.directives[name];
+    var reading;
+    if(fetchDirs.indexOf(name)>=0){
+      var gov=[];
+      Object.keys(CspWhy.CHAINS).forEach(function(t){
+        var g=CspWhy.governing(p,t);
+        if(g.directive===name)gov.push(t);
+      });
+      reading='governs: '+(gov.length?gov.join(', '):'nothing (shadowed by a more specific directive)');
+    } else if(otherDirs.indexOf(name)>=0){
+      reading='standalone - no fallback';
+    } else {
+      reading='not a fetch directive CspWhy evaluates (e.g. reporting/enforcement); ignored by the checks below';
+    }
+    if(d.values.length===0)reading+=' - EMPTY, equals \'none\'';
+    if(d.values.indexOf("'none'")>=0&&d.values.length>1)reading+=' - contradictory: \'none\' wins';
+    rows+='<tr><td class="mono">'+esc(name)+'</td><td class="mono">'+esc(d.values.join(' '))+'</td><td class="lose">'+esc(reading)+'</td></tr>';
+  });
+  if(p.order.length===0)rows+='<tr><td colspan="3" class="lose">No policy - everything is unrestricted.</td></tr>';
+  $('anatomy').innerHTML=rows;
+  $('warnings').innerHTML=p.warnings.map(function(w){return '<p class="note">&#9888; '+esc(w)+'</p>';}).join('');
+}
+Array.prototype.forEach.call(document.querySelectorAll('.presets button'),function(b){
+  b.addEventListener('click',function(){$('policy').value=b.getAttribute('data-p');$('verdicts').innerHTML='';anatomy();});
+});
+Array.prototype.forEach.call(document.querySelectorAll('.checks button[data-c]'),function(b){
+  b.addEventListener('click',function(){ask(JSON.parse(b.getAttribute('data-c')));});
+});
+Array.prototype.forEach.call(document.querySelectorAll('.checks button[data-u]'),function(b){
+  b.addEventListener('click',function(){ask({type:b.getAttribute('data-u'),url:$('url').value.trim()});});
+});
+['policy','origin'].forEach(function(id){$(id).addEventListener('input',anatomy);});
+anatomy();
+})();
+</script>
+</body>
+</html>
