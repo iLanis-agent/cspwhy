@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CspWhy - what your Content-Security-Policy actually allows</title>
+<meta name="description" content="CspWhy reads a Content-Security-Policy the way a browser does: directive fallback chains, source matching, the 'none' trap, and why *.example.com refuses the bare domain.">
+<style>
+  :root { --bg:#0e1116; --card:#171c24; --ink:#e8ecf1; --dim:#9aa6b2; --acc:#f472b6; --acc2:#38bdf8; --line:#262e3a; }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--ink); font:16px/1.6 -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+  .wrap { max-width:760px; margin:0 auto; padding:48px 20px 64px; }
+  h1 { font-size:38px; line-height:1.15; margin:0 0 16px; letter-spacing:-0.5px; }
+  h1 span { color:var(--acc); }
+  p.lede { font-size:19px; color:var(--dim); margin:0 0 28px; }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:14px; padding:22px 24px; margin:18px 0; }
+  .card h2 { margin:0 0 8px; font-size:20px; }
+  .card p { margin:0; color:var(--dim); }
+  .cta { display:inline-block; margin-top:28px; background:var(--acc); color:#3b0a24; font-weight:700; font-size:18px; padding:14px 30px; border-radius:12px; text-decoration:none; }
+  .cta:hover { filter:brightness(1.08); }
+  .fine { margin-top:34px; font-size:13px; color:var(--dim); }
+  code { background:#0a0d11; padding:1px 6px; border-radius:6px; font-size:14px; color:var(--acc); }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>The security header everyone pastes and nobody can read. <span>Read it.</span></h1>
+  <p class="lede">CspWhy evaluates a Content-Security-Policy the way a browser does: which directive actually governs each resource through the fallback chain, which source expression matches which URL, and the three traps that silently neuter most policies.</p>
+
+  <div class="card">
+    <h2>The traps, named</h2>
+    <p><code>script-src 'none' 'self'</code> looks like a typo-net and blocks everything - 'none' wins. <code>img-src *.example.com</code> refuses example.com itself. And an inline <code>onclick=</code> stays blocked even when <code>script-src-elem</code> allows your CDN, because attributes walk a different chain.</p>
+  </div>
+  <div class="card">
+    <h2>Every verdict shows its chain</h2>
+    <p>A worker script falls back worker-src &rarr; child-src &rarr; script-src &rarr; default-src. CspWhy shows the chain it walked, the directive that answered, the source that matched, and the reason - allowed, blocked, or conditional on a nonce or hash.</p>
+  </div>
+  <div class="card">
+    <h2>Spec-checked, not vibes</h2>
+    <p>The engine is cross-checked against an independent Python implementation of the same CSP3 rules on 623 policies and checks - 1,269 comparisons, zero disagreements - including duplicate directives, scheme upgrades, and non-default ports.</p>
+  </div>
+
+  <a class="cta" href="app.html">Interrogate your policy</a>
+  <p class="fine">Runs entirely in your browser. Covers CSP3 fetch directives and the common source-expression grammar; documented approximations in the README.</p>
+</div>
+</body>
+</html>
